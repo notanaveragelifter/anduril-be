@@ -1,98 +1,82 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Anduril Backend ⚔️
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+High-performance NestJS backend for the **Oracle Dashboard**, providing real-time prediction market data, settlement statuses, and dashboard statistics. Connected to Supabase with optimized parallel querying.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## 🚀 Tech Stack
 
-## Description
+- **Framework**: [NestJS](https://nestjs.com/)
+- **Database**: [Supabase](https://supabase.com/) (PostgreSQL)
+- **Language**: [TypeScript](https://www.typescriptlang.org/)
+- **Module Resolution**: `NodeNext` (ESM)
+- **Authentication**: Static Bearer Token Guard
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+---
 
-## Project setup
+## 🏗️ Architecture
 
+The application is structured around a central **Market Module**, which encapsulates all logic for prediction market data.
+
+### Core Components
+
+- **Market Controller**: Defines the REST interface and routing. Static routes are prioritized over dynamic parameter routes to prevent conflicts.
+- **Market Service**: Contains the business logic. It implements a unique **Two-Query Merge Pattern** to join data between `market_allData` and `market_oracle_db` without requiring explicit Foreign Key configurations in Supabase.
+- **Supabase Service**: A wrapper around the `@supabase/supabase-js` client, providing a singleton instance across the application.
+- **Auth Guard**: A security layer that validates the `Authorization: Bearer <token>` header against the `API_KEY` defined in environment variables.
+
+### ⚡ Performance Optimization: Parallel Batching
+When fetching details for hundreds of markets (e.g., resolvable markets), the system uses a **Parallel Batching** strategy. It chunks address lists into groups of 50 and executes queries in parallel. This prevents URL-length limit failures and significantly reduces response times.
+
+---
+
+## 📡 API Endpoints
+
+All endpoints are prefixed with `/market` and require a valid `Authorization` header.
+
+### Market Discovery
+- `GET /market` — Paginated list of all markets with full details and settlement criteria.
+- `GET /market/all/:address` — Comprehensive details for a specific market address.
+
+### Settlement & Oracle Data
+- `GET /market/resolvable` — Flat array of addresses pending oracle settlement.
+- `GET /market/resolvable/details` — Full details for all resolvable markets (non-paginated).
+- `GET /market/settled` — Paginated list of settled market addresses.
+- `GET /market/settled/details` — Full details for all settled markets (paginated).
+- `GET /market/settlementData/:address` — Specific oracle resolution results (Answer, Reasoning, Grok/Perplexity data).
+
+### Dashboard Analytics
+- `GET /market/stats` — Real-time stats including total markets, weekly/monthly settlements, and category distributions.
+
+---
+
+## 🛠️ Setup & Installation
+
+### 1. Clone & Install
 ```bash
-$ npm install
+git clone git@github.com:notanaveragelifter/anduril-be.git
+cd anduril-be
+npm install
 ```
 
-## Compile and run the project
-
+### 2. Configure Environment
+Create a `.env` file in the root directory (refer to `.env.example`):
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+PORT=3000
+SUPABASE_URL=your_supabase_url
+SUPABASE_ANON_KEY=your_supabase_anon_key
+API_KEY=your_secure_api_key
 ```
 
-## Run tests
-
+### 3. Run the App
 ```bash
-# unit tests
-$ npm run test
+# Development (watch mode)
+npm run start:dev
 
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+# Production build
+npm run build
+npm run start:prod
 ```
 
-## Deployment
+---
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
-
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+## 📜 License
+This project is UNLICENSED.
