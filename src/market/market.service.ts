@@ -139,7 +139,24 @@ export class MarketService {
         const { data, error } = await this.client
             .from('market_oracle_db')
             .select('market_address')
-            .or('settlement_data.is.null,settlement_data.eq.{}');
+            .or('settlement_data.is.null,settlement_data.eq.{}')
+            .not('settlement_criteria', 'is', null)
+            .neq('settlement_criteria', '{}')
+            .filter('settlement_criteria->>resolvable', 'eq', 'true');
+
+        if (error) {
+            throw new InternalServerErrorException(error.message);
+        }
+
+        return (data ?? []).map((row) => row.market_address);
+    }
+    // ─── NEW: GET /market/pending ───────────────────────────────────────
+    async getPending(): Promise<string[]> {
+        const { data, error } = await this.client
+            .from('market_oracle_db')
+            .select('market_address')
+            .or('settlement_data.is.null,settlement_data.eq.{}')
+            .eq('settlement_criteria->resolvable', true);
 
         if (error) {
             throw new InternalServerErrorException(error.message);
@@ -381,7 +398,10 @@ export class MarketService {
         const { data: oracleRows, error: oracleError } = await this.client
             .from('market_oracle_db')
             .select('market_address,question,settlement_criteria,market_endTime,type')
-            .or('settlement_data.is.null,settlement_data.eq.{}');
+            .or('settlement_data.is.null,settlement_data.eq.{}')
+            .not('settlement_criteria', 'is', null)
+            .neq('settlement_criteria', '{}')
+            .filter('settlement_criteria->>resolvable', 'eq', 'true');
 
         if (oracleError) {
             throw new InternalServerErrorException(oracleError.message);
